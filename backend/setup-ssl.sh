@@ -35,7 +35,7 @@ server {
     server_name $YOUR_DOMAIN;
 
     location / {
-        proxy_pass http://localhost:80; # Points to Frontend running on port 80 (Docker) or static files
+        proxy_pass http://localhost:3000; # Points to Frontend running on port 3000 (Docker)
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';
