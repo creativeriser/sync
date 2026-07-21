@@ -19,7 +19,7 @@ async function main() {
   let dockerReady = false;
   for (let i = 0; i < 20; i++) {
     try {
-      execSync(`${sshCmd} "docker --version && docker-compose --version"`, { stdio: 'ignore' });
+      execSync(`${sshCmd} "docker --version && docker compose version"`, { stdio: 'ignore' });
       dockerReady = true;
       break;
     } catch (e) {
@@ -34,7 +34,7 @@ async function main() {
   }
 
   console.log("Docker is ready. Building and starting containers...");
-  run(`${sshCmd} "cd syncmind-ai && sudo docker-compose up -d --build"`);
+  run(`${sshCmd} "cd syncmind-ai && sudo docker compose up -d --build"`);
   console.log("Deployment complete!");
 }
 

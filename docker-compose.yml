@@ -10,7 +10,7 @@ services:
       - ./backend/auth-service/.env
     environment:
       - NODE_ENV=production
-      - CLIENT_URL=http://localhost:3000
+      - CLIENT_URL=https://syncmind.duckdns.org
     volumes:
       - auth-db:/app/prisma
     restart: always
@@ -20,14 +20,14 @@ services:
       context: ./backend/project-service
     ports:
       - "5002:5002"
+    env_file:
+      - ./backend/project-service/.env
     environment:
       - PORT=5002
       - NODE_ENV=production
-      - DATABASE_URL=${DATABASE_URL:-}
       - JWT_SECRET=w7NroeCl5YE5D5PSVXjLbZjmmhRzC6st0dd2uSS3T3J
-      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
-      - GEMINI_MODEL=gemini-2.5-flash
-      - CLIENT_URL=http://localhost:3000
+      - GEMINI_MODEL=gemini-3.5-flash
+      - CLIENT_URL=https://syncmind.duckdns.org
     volumes:
       - project-db:/app/prisma
     depends_on:
@@ -44,6 +44,16 @@ services:
       - project-service
     restart: always
 
+  mongo-db:
+    image: mongo:latest
+    command: ["--replSet", "rs0", "--bind_ip_all", "--port", "27017"]
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    restart: always
+
 volumes:
   auth-db:
   project-db:
+  mongo-data:

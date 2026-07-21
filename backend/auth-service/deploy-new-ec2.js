@@ -13,7 +13,7 @@ function run(cmd) {
 }
 
 async function main() {
-  const ip = "3.110.171.248";
+  const ip = "98.80.11.80";
   const sshCmd = `ssh -i syncmind-ec2-key.pem -o StrictHostKeyChecking=no -o ConnectTimeout=5 ubuntu@${ip}`;
   
   console.log("Waiting for new EC2 SSH...");
@@ -39,7 +39,7 @@ async function main() {
   let dockerReady = false;
   for (let i = 0; i < 30; i++) {
     try {
-      execSync(`${sshCmd} "docker --version && docker-compose --version"`, { stdio: 'ignore' });
+      execSync(`${sshCmd} "docker --version && docker compose version"`, { stdio: 'ignore' });
       dockerReady = true;
       break;
     } catch (e) {
@@ -64,7 +64,7 @@ free -h
   } catch(e) {}
 
   console.log("Building and starting containers...");
-  run(`${sshCmd} "cd syncmind-ai && sudo docker-compose up -d --build"`);
+  run(`${sshCmd} "cd syncmind-ai && sudo docker compose up -d --build"`);
   console.log("Deployment complete!");
 }
 

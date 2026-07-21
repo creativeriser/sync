@@ -48,7 +48,7 @@ free -h
   }
 
   console.log("Building and starting containers...");
-  run(`${sshCmd} "cd syncmind-ai && sudo docker-compose down && sudo docker-compose up -d --build"`);
+  run(`${sshCmd} "cd syncmind-ai && sudo docker compose down && sudo docker compose up -d --build"`);
   console.log("Deployment complete!");
 }
 
