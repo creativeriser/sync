@@ -10,7 +10,7 @@ services:
       - ./backend/auth-service/.env
     environment:
       - NODE_ENV=production
-      - CLIENT_URL=https://syncmind.duckdns.org
+      - CLIENT_URL=http://localhost:3000
     volumes:
       - auth-db:/app/prisma
     restart: always
@@ -27,7 +27,7 @@ services:
       - JWT_SECRET=w7NroeCl5YE5D5PSVXjLbZjmmhRzC6st0dd2uSS3T3J
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - GEMINI_MODEL=gemini-2.5-flash
-      - CLIENT_URL=https://syncmind.duckdns.org
+      - CLIENT_URL=http://localhost:3000
     volumes:
       - project-db:/app/prisma
     depends_on:
