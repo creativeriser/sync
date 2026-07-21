@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  auth-service:
+    build:
+      context: ./backend/auth-service
+    ports:
+      - "5001:5001"
+    env_file:
+      - ./backend/auth-service/.env
+    environment:
+      - NODE_ENV=production
+      - CLIENT_URL=https://syncmind.duckdns.org
+    volumes:
+      - auth-db:/app/prisma
+    restart: always
+
+  project-service:
+    build:
+      context: ./backend/project-service
+    ports:
+      - "5002:5002"
+    environment:
+      - PORT=5002
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL:-}
+      - JWT_SECRET=w7NroeCl5YE5D5PSVXjLbZjmmhRzC6st0dd2uSS3T3J
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_MODEL=gemini-2.5-flash
+      - CLIENT_URL=https://syncmind.duckdns.org
+    volumes:
+      - project-db:/app/prisma
+    depends_on:
+      - auth-service
+    restart: always
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - auth-service
+      - project-service
+    restart: always
+
+volumes:
+  auth-db:
+  project-db:
