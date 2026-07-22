@@ -245,7 +245,13 @@ async function analyzeConversation(conversationText) {
   if (isMock) {
     rawText = JSON.stringify(getMockAnalysis(conversationText));
   } else {
-    rawText = await callGemini(conversationText);
+    try {
+      rawText = await callGemini(conversationText);
+    } catch (err) {
+      console.error('[geminiService] Live Gemini API failed, falling back to mock extraction:', err.message);
+      rawText = JSON.stringify(getMockAnalysis(conversationText));
+      isMock = true;
+    }
   }
 
   const parsed = safeParseJson(rawText);
