@@ -31,7 +31,7 @@ const env = {
 
   JWT_SECRET: required('JWT_SECRET', 'dev_only_insecure_secret_change_me'),
   GEMINI_API_KEY: (process.env.GEMINI_API_KEY || '').trim(),
-  GEMINI_MODEL: (process.env.GEMINI_MODEL || 'gemini-1.5-flash').trim(),
+  GEMINI_MODEL: (process.env.GEMINI_MODEL || 'gemini-flash-latest').trim(),
   MAX_UPLOAD_SIZE_MB: parseInt(process.env.MAX_UPLOAD_SIZE_MB || '2', 10),
   SMTP_HOST: process.env.SMTP_HOST || '',
   SMTP_PORT: parseInt(process.env.SMTP_PORT || '587', 10),

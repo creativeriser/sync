@@ -210,7 +210,7 @@ function getMockAnalysis(conversationText) {
 
 async function callGemini(conversationText) {
   const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
-  const modelsToTry = [...new Set([env.GEMINI_MODEL, 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash', 'gemini-2.5-flash'])].filter(Boolean);
+  const modelsToTry = [...new Set([env.GEMINI_MODEL, 'gemini-flash-latest', 'gemini-pro-latest', 'gemini-2.0-flash-lite', 'gemini-1.5-flash'])].filter(Boolean);
 
   let lastErr;
   for (const modelName of modelsToTry) {
