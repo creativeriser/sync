@@ -50,7 +50,7 @@ server {
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
     }
 
-    location /api/project/ {
+    location /api/ {
         proxy_pass http://localhost:5002/;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
