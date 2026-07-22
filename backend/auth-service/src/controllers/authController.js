@@ -3,7 +3,7 @@ const prisma = require('../config/db');
 const { signToken } = require('../utils/jwt');
 const { ok, created, AppError } = require('../utils/apiResponse');
 const crypto = require('crypto');
-const { sendOtpEmail } = require('../utils/email');
+const { sendOtpEmail, sendPasswordResetEmail } = require('../utils/email');
 
 const AVATAR_COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#06b6d4'];
 
@@ -146,4 +146,60 @@ async function resendOtp(req, res) {
   }
 }
 
-module.exports = { register, login, verifyOtp, resendOtp, me, updatePreferences };
+async function forgotPassword(req, res) {
+  const { email } = req.body;
+  const user = await prisma.user.findUnique({ where: { email } });
+  
+  // We return a success message even if the user is not found to prevent email enumeration
+  if (!user) {
+    return ok(res, { message: 'If that email address is in our database, we will send you an email to reset your password.' });
+  }
+
+  const resetToken = crypto.randomBytes(32).toString('hex');
+  const resetTokenExpiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { resetToken, resetTokenExpiresAt }
+  });
+
+  try {
+    await sendPasswordResetEmail(email, resetToken);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('SES Sandbox Error on Forgot Password:', err.message);
+  }
+  return ok(res, { message: 'If that email address is in our database, we will send you an email to reset your password.' });
+}
+
+async function resetPassword(req, res) {
+  const { token, newPassword } = req.body;
+
+  const user = await prisma.user.findFirst({
+    where: {
+      resetToken: token,
+      resetTokenExpiresAt: {
+        gt: new Date()
+      }
+    }
+  });
+
+  if (!user) {
+    throw new AppError('Invalid or expired reset token', 400);
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      passwordHash,
+      resetToken: null,
+      resetTokenExpiresAt: null
+    }
+  });
+
+  return ok(res, { message: 'Password has been successfully reset. You can now log in.' });
+}
+
+module.exports = { register, login, verifyOtp, resendOtp, me, updatePreferences, forgotPassword, resetPassword };

@@ -20,4 +20,13 @@ const verifyOtpSchema = z.object({
   otpCode: z.string().length(6, 'OTP must be exactly 6 digits'),
 });
 
-module.exports = { registerSchema, loginSchema, updatePreferencesSchema, verifyOtpSchema };
+const forgotPasswordSchema = z.object({
+  email: z.string().trim().toLowerCase().email('Invalid email address'),
+});
+
+const resetPasswordSchema = z.object({
+  token: z.string().min(1, 'Token is required'),
+  newPassword: z.string().min(8, 'Password must be at least 8 characters').max(128),
+});
+
+module.exports = { registerSchema, loginSchema, updatePreferencesSchema, verifyOtpSchema, forgotPasswordSchema, resetPasswordSchema };
