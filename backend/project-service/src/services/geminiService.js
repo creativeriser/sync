@@ -210,31 +210,30 @@ function getMockAnalysis(conversationText) {
 
 async function callGemini(conversationText) {
   const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
-  const model = genAI.getGenerativeModel({
-    model: env.GEMINI_MODEL,
-    systemInstruction: SYSTEM_INSTRUCTION,
-    generationConfig: {
-      temperature: 0.2,
-      responseMimeType: 'application/json',
-    },
-  });
-
-  const prompt = buildPrompt(conversationText);
-
+  const modelsToTry = [...new Set([env.GEMINI_MODEL, 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash', 'gemini-2.5-flash'])].filter(Boolean);
 
   let lastErr;
-  for (let attempt = 0; attempt < 2; attempt += 1) {
+  for (const modelName of modelsToTry) {
     try {
+      const model = genAI.getGenerativeModel({
+        model: modelName,
+        systemInstruction: SYSTEM_INSTRUCTION,
+        generationConfig: {
+          temperature: 0.2,
+          responseMimeType: 'application/json',
+        },
+      });
+
+      const prompt = buildPrompt(conversationText);
       const result = await model.generateContent(prompt);
       const text = result.response.text();
       return text;
     } catch (err) {
+      console.warn(`[geminiService] Model ${modelName} failed (${err.message}). Trying fallback model...`);
       lastErr = err;
-      if (attempt === 0) {
-        await new Promise((r) => setTimeout(r, 500));
-      }
     }
   }
+
   throw new AppError(`AI analysis failed: ${lastErr.message}`, 502);
 }
 
