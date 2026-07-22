@@ -346,9 +346,11 @@ async function analyzeConversation(conversationText) {
   let data;
   if (!isMock && rawText) {
     const parsed = safeParseJson(rawText);
-    const validated = aiAnalysisSchema.safeParse(parsed);
-    if (validated.success) {
-      data = validated.data;
+    if (parsed) {
+      const validated = aiAnalysisSchema.safeParse(parsed);
+      if (validated.success) {
+        data = validated.data;
+      }
     }
   }
 
