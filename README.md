@@ -30,8 +30,8 @@ own `package.json`, own port, and no direct DB coupling between them.
    backend/auth-service — :5001                backend/project-service — :5002
                 │                                        │
                 ▼                                        ▼
-       PostgreSQL/SQLite                        PostgreSQL/SQLite
-        (Users table)                    (Projects, Tasks, Conversations,
+           MongoDB                                  MongoDB
+      (Users collection)                 (Projects, Tasks, Conversations,
                                            Insights, Notifications, ...)
                                                           │
                                                           ▼
@@ -46,7 +46,7 @@ own `package.json`, own port, and no direct DB coupling between them.
   `ProjectMember` without a lookup).
 - `project-service` keeps its own **denormalized copy** of member names/emails
   on `ProjectMember` (set when a member is added) so it can send
-  notifications without querying a `Users` table it doesn't own.
+  notifications without querying a `Users` collection it doesn't own.
 
 This is the standard JWT-based microservice boundary: loose coupling, no
 shared database, one shared secret. The tradeoff (documented in code
@@ -218,7 +218,7 @@ member joining, and project health dropping to `NEEDS_ATTENTION`/`AT_RISK`
 (debounced — only sent when health actually worsens). **Known limitation of
 the service split:** the per-account "email notifications off" toggle (in
 Settings) is stored on `User` in auth-service, but project-service — which
-actually sends the emails — has no access to that table. Right now
+actually sends the emails — has no access to that collection. Right now
 project-service emails everyone with an email on file regardless of that
 toggle. Closing this gap cleanly needs either (a) a small internal
 auth-service endpoint project-service can call to check the flag, or (b)
@@ -270,7 +270,7 @@ The entire stack is containerized and deployed on an **AWS EC2 instance** using 
 
 To deploy to AWS:
 1. Update `docker-compose.yml` with your production `CLIENT_URL`.
-2. Run the deployment script: `node backend/auth-service/deploy-docker.js` (Ensure your SSH keys and IPs are configured correctly in the script).
+2. Run the deployment script: `node backend/auth-service/scripts/deploy.js` (Ensure your SSH keys and IPs are configured correctly in the script).
 
 ---
 
