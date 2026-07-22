@@ -32,6 +32,7 @@ export const taskService = {
   update: (id, payload) => api.put(`/tasks/${id}`, payload),
   remove: (id) => api.delete(`/tasks/${id}`),
   updateStatus: (id, status) => api.patch(`/tasks/${id}/status`, { status }),
+  toggleRead: (id) => api.patch(`/tasks/${id}/toggle-read`),
 };
 
 export const notificationService = {

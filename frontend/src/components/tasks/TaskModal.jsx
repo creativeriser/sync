@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { Trash2 } from 'lucide-react';
+import { Trash2, BookOpen, BookMarked } from 'lucide-react';
 import { useProjectContext } from '../../context/ProjectContext';
 import { projectService, taskService } from '../../services/projectService';
 import { useConfirm } from '../common/Common';
@@ -11,6 +11,7 @@ export default function TaskModal({ open, onClose, task }) {
   const { projectId, members, tasks, refreshTasks, refreshOverview } = useProjectContext();
   const [form, setForm] = useState(emptyForm);
   const [submitting, setSubmitting] = useState(false);
+  const [togglingRead, setTogglingRead] = useState(false);
   const { confirm, dialog } = useConfirm();
 
   useEffect(() => {
@@ -86,15 +87,42 @@ export default function TaskModal({ open, onClose, task }) {
     });
   }
 
+  async function handleToggleRead() {
+    if (!task) return;
+    setTogglingRead(true);
+    try {
+      await taskService.toggleRead(task.id);
+      await refreshTasks();
+      toast.success(task.isRead ? 'Marked as unread' : 'Marked as read');
+    } catch (err) {
+      toast.error(err.message || 'Could not update task');
+    } finally {
+      setTogglingRead(false);
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
       <form onSubmit={handleSubmit} className="card w-full max-w-lg p-6 animate-resolve max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-display text-lg font-semibold">{isEdit ? 'Edit task' : 'New task'}</h3>
           {isEdit && (
-            <button type="button" onClick={handleDelete} className="text-ink2-muted hover:text-alert p-1.5 rounded-lg hover:bg-alert-dim transition-colors">
-              <Trash2 size={16} />
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={handleToggleRead}
+                disabled={togglingRead}
+                title={task?.isRead ? 'Mark as unread' : 'Mark as read'}
+                className={`p-1.5 rounded-lg transition-colors disabled:opacity-50 ${
+                  task?.isRead ? 'text-signal hover:text-ink2-muted hover:bg-surface-raised' : 'text-ink2-muted hover:text-signal hover:bg-signal/10'
+                }`}
+              >
+                {task?.isRead ? <BookMarked size={16} /> : <BookOpen size={16} />}
+              </button>
+              <button type="button" onClick={handleDelete} className="text-ink2-muted hover:text-alert p-1.5 rounded-lg hover:bg-alert-dim transition-colors">
+                <Trash2 size={16} />
+              </button>
+            </div>
           )}
         </div>
 

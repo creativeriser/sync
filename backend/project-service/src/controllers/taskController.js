@@ -15,6 +15,7 @@ function serializeTask(t) {
     deadline: t.deadline,
     confidence: t.confidence,
     source: t.source,
+    isRead: t.isRead,
     createdAt: t.createdAt,
     updatedAt: t.updatedAt,
     owner: t.owner ? { id: t.owner.id, name: t.owner.name } : null,
@@ -107,4 +108,14 @@ async function updateTaskStatus(req, res) {
   return ok(res, serializeTask(updated));
 }
 
-module.exports = { listTasks, createTask, updateTask, deleteTask, updateTaskStatus };
+async function toggleTaskRead(req, res) {
+  const task = await findOwnedTask(req.params.id, req.user.id);
+  const updated = await prisma.task.update({
+    where: { id: task.id },
+    data: { isRead: !task.isRead },
+    include: taskInclude,
+  });
+  return ok(res, serializeTask(updated));
+}
+
+module.exports = { listTasks, createTask, updateTask, deleteTask, updateTaskStatus, toggleTaskRead };

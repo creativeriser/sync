@@ -9,5 +9,6 @@ router.use(requireAuth);
 router.put('/:id', validate(updateTaskSchema), taskController.updateTask);
 router.delete('/:id', taskController.deleteTask);
 router.patch('/:id/status', validate(updateStatusSchema), taskController.updateTaskStatus);
+router.patch('/:id/toggle-read', taskController.toggleTaskRead);
 
 module.exports = router;

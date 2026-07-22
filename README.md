@@ -114,7 +114,7 @@ syncmind-ai/
 |------------|--------|
 | Frontend   | React 18, Vite, Tailwind CSS, React Router, Axios, `@hello-pangea/dnd`, FullCalendar, Recharts, `react-hot-toast` |
 | Backend    | Node.js, Express, REST — **two independent services** |
-| Database   | SQLite (dev) / PostgreSQL via Supabase (prod), Prisma ORM — separate schema per service |
+| Database   | MongoDB, Prisma ORM — separate schema per service |
 | AI         | Google Gemini API (`@google/generative-ai`), with mock fallback |
 | Auth       | JWT (`jsonwebtoken`), verified locally by both services off one shared secret; `bcryptjs` password hashing (auth-service only) |
 | Email      | Nodemailer (SMTP), with console-log mock fallback |
@@ -171,23 +171,16 @@ Three terminals: `auth-service`, `project-service`, `frontend`, each with
 
 ---
 
-## 5. Database setup (SQLite → Supabase)
+## 5. Database setup (MongoDB)
 
-Both services default to **SQLite** for zero-setup local dev — each with its
-own schema, each pointed at its own `dev.db` file (or the same Postgres
-instance in production, using **separate schemas/tables** — services never
-share tables, only the same physical Postgres server if you choose to run
-them there for convenience).
+Both services use **MongoDB** for their database, configured via Prisma ORM.
 
-To move either service to Supabase Postgres:
-1. In that service's `prisma/schema.prisma`, change `provider = "sqlite"` to
-   `provider = "postgresql"`.
-2. Set `DATABASE_URL` in that service's `.env` to your Supabase connection string.
-3. Run `npx prisma migrate deploy` (or `migrate dev` in development).
+1. Ensure MongoDB is running locally or via Docker (`docker-compose up -d mongo-db`).
+2. Set `DATABASE_URL` in each service's `.env` file to your MongoDB connection string.
+3. Run `npx prisma generate` to generate the Prisma client for MongoDB.
+   *(Note: MongoDB with Prisma doesn't use standard migrations, just push/generate).*
 
-No model changes are required — every field type used is compatible with
-both providers. Do this independently for each service; they don't need to
-share a database, and in a real deployment usually shouldn't.
+Each service has its own schema in `prisma/schema.prisma`.
 
 ---
 
@@ -268,21 +261,16 @@ npm run lint                # frontend only
 
 ## 10. Deployment
 
-- **Frontend → Vercel.** Since the frontend now talks to two backend hosts in
-  production, add rewrites in `vercel.json`:
-  ```json
-  {
-    "rewrites": [
-      { "source": "/api/auth/:path*", "destination": "https://your-auth-service.onrender.com/:path*" },
-      { "source": "/api/:path*", "destination": "https://your-project-service.onrender.com/:path*" }
-    ]
-  }
-  ```
-- **auth-service → Render.** Build: `npm install && npx prisma generate`. Start: `npm start`.
-- **project-service → Render.** Same build/start. Make sure `JWT_SECRET`
-  matches auth-service's exactly.
-- **Database → Supabase**, one instance is fine for both services (§5) — just
-  keep their tables logically separate (they already are, by schema design).
+The entire stack is containerized and deployed on an **AWS EC2 instance** using Docker Compose.
+
+- **Infrastructure:** AWS EC2 instance running Docker and Docker Compose.
+- **Frontend & Routing:** Served via an Nginx container on port 80. Nginx handles routing `/api/auth/` to the `auth-service` and `/api/` to the `project-service`.
+- **Backend Services:** Both `auth-service` and `project-service` are built into Docker images and orchestrated by Docker Compose.
+- **Database:** A `mongo-db` Docker container runs MongoDB for both services.
+
+To deploy to AWS:
+1. Update `docker-compose.yml` with your production `CLIENT_URL`.
+2. Run the deployment script: `node backend/auth-service/deploy-docker.js` (Ensure your SSH keys and IPs are configured correctly in the script).
 
 ---
 

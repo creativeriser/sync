@@ -23,10 +23,7 @@ export default function Login() {
     }
   }
 
-  function handleFillDemo() {
-    setForm({ email: 'demo@syncmind.ai', password: 'password123' });
-    toast.success('Filled demo credentials!');
-  }
+
 
   return (
     <AuthLayout title="Welcome back" subtitle="Log in to your projects">
@@ -57,15 +54,7 @@ export default function Login() {
           {submitting ? 'Logging in...' : 'Log in'}
         </button>
       </form>
-      <div className="mt-4 pt-4 border-t border-ink2-faint/20 text-center">
-        <button
-          type="button"
-          onClick={handleFillDemo}
-          className="text-xs px-3 py-1.5 rounded bg-signal/10 hover:bg-signal/20 text-signal transition-colors inline-flex items-center gap-1.5"
-        >
-          <span>⚡</span> Quick Fill Demo Credentials
-        </button>
-      </div>
+
       <p className="text-sm text-ink2-muted mt-5 text-center">
         Don't have an account? <Link to="/register" className="text-signal hover:underline">Sign up</Link>
       </p>

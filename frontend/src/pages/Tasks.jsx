@@ -1,16 +1,19 @@
 import { useMemo, useState } from 'react';
-import { Plus, ListChecks } from 'lucide-react';
+import { Plus, ListChecks, BookOpen, BookMarked } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useProjectContext } from '../context/ProjectContext';
 import { Avatar, EmptyState } from '../components/common/Common';
 import TaskModal from '../components/tasks/TaskModal';
 import { PRIORITY_META, STATUS_META } from '../utils/taskMeta';
 import { deadlineLabel, isOverdue } from '../utils/format';
+import { taskService } from '../services/projectService';
 
 export default function Tasks() {
-  const { tasks, members } = useProjectContext();
+  const { tasks, members, refreshTasks } = useProjectContext();
   const [modalOpen, setModalOpen] = useState(false);
   const [activeTask, setActiveTask] = useState(null);
   const [filters, setFilters] = useState({ status: 'ALL', ownerId: 'ALL' });
+  const [togglingId, setTogglingId] = useState(null);
 
   const filtered = useMemo(() => {
     return tasks.filter((t) => {
@@ -26,6 +29,20 @@ export default function Tasks() {
   function openEdit(task) {
     setActiveTask(task);
     setModalOpen(true);
+  }
+
+  async function handleToggleRead(e, task) {
+    e.stopPropagation();
+    setTogglingId(task.id);
+    try {
+      await taskService.toggleRead(task.id);
+      await refreshTasks();
+      toast.success(task.isRead ? 'Marked as unread' : 'Marked as read');
+    } catch (err) {
+      toast.error(err.message || 'Could not update task');
+    } finally {
+      setTogglingId(null);
+    }
   }
 
   return (
@@ -61,12 +78,22 @@ export default function Tasks() {
                 <th className="px-4 py-3 font-medium">Status</th>
                 <th className="px-4 py-3 font-medium">Priority</th>
                 <th className="px-4 py-3 font-medium">Deadline</th>
+                <th className="px-4 py-3 font-medium text-center">Read</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((t) => (
-                <tr key={t.id} className="border-b border-border-soft last:border-0 hover:bg-surface-raised cursor-pointer transition-colors" onClick={() => openEdit(t)}>
-                  <td className="px-4 py-3 font-medium text-ink2-primary">{t.title}</td>
+                <tr
+                  key={t.id}
+                  className={`border-b border-border-soft last:border-0 hover:bg-surface-raised cursor-pointer transition-colors ${!t.isRead ? 'bg-signal/5' : ''}`}
+                  onClick={() => openEdit(t)}
+                >
+                  <td className="px-4 py-3 font-medium text-ink2-primary">
+                    <div className="flex items-center gap-2">
+                      {!t.isRead && <span className="w-2 h-2 rounded-full bg-signal shrink-0" title="Unread" />}
+                      {t.title}
+                    </div>
+                  </td>
                   <td className="px-4 py-3">
                     {t.owner ? (
                       <div className="flex items-center gap-2"><Avatar name={t.owner.name} size={22} /> {t.owner.name}</div>
@@ -78,6 +105,17 @@ export default function Tasks() {
                   <td className="px-4 py-3"><span className={`badge ${PRIORITY_META[t.priority]?.className}`}>{PRIORITY_META[t.priority]?.label}</span></td>
                   <td className={`px-4 py-3 ${isOverdue(t.deadline, t.status) ? 'text-alert font-medium' : 'text-ink2-muted'}`}>
                     {t.deadline ? deadlineLabel(t.deadline) : '—'}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <button
+                      type="button"
+                      disabled={togglingId === t.id}
+                      onClick={(e) => handleToggleRead(e, t)}
+                      title={t.isRead ? 'Mark as unread' : 'Mark as read'}
+                      className={`p-1.5 rounded-lg transition-colors disabled:opacity-50 ${t.isRead ? 'text-signal hover:text-ink2-muted hover:bg-surface-raised' : 'text-ink2-muted hover:text-signal hover:bg-signal/10'}`}
+                    >
+                      {t.isRead ? <BookMarked size={15} /> : <BookOpen size={15} />}
+                    </button>
                   </td>
                 </tr>
               ))}

@@ -79,7 +79,7 @@ export default function Dashboard() {
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             {projects.map((p) => (
-              <ProjectCard key={p.id} project={p} />
+              <ProjectCard key={p.id} project={p} onDeleted={(id) => setProjects((prev) => prev.filter((x) => x.id !== id))} />
             ))}
           </div>
         )}

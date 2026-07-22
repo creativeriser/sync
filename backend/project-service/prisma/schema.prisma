@@ -94,6 +94,7 @@ model Task {
   deadline    DateTime?
   confidence  Float?   // AI extraction confidence, null if manually created
   source      String   @default("MANUAL") // MANUAL | AI
+  isRead      Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
