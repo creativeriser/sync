@@ -295,47 +295,82 @@ function extractSmartAnalysis(conversationText) {
 async function callGeminiREST(conversationText) {
   if (!env.GEMINI_API_KEY) throw new Error('No API key provided');
 
-  const models = ['gemini-flash-latest', 'gemini-1.5-flash', 'gemini-2.0-flash'];
+  // Current valid Gemini API model names (as of July 2026).
+  // New Google AI Studio keys (AQ. prefix) require x-goog-api-key header,
+  // not the legacy ?key= query parameter.
+  const configuredModel = env.GEMINI_MODEL &&
+    !['gemini-flash-latest', 'gemini-3.5-flash'].includes(env.GEMINI_MODEL)
+    ? env.GEMINI_MODEL
+    : null;
+
+  const models = [
+    configuredModel,
+    'gemini-2.5-flash',       // Latest recommended
+    'gemini-2.0-flash',       // Stable
+    'gemini-2.0-flash-lite',  // Lightweight
+    'gemini-1.5-flash',       // Fallback
+  ].filter(Boolean);
+
+  const uniqueModels = [...new Set(models)];
   let lastErr;
 
-  for (const m of models) {
+  for (const m of uniqueModels) {
     try {
+      console.log(`[geminiService] Trying model: ${m}`);
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${env.GEMINI_API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            // x-goog-api-key works for both AIzaSy and AQ. key formats
+            'x-goog-api-key': env.GEMINI_API_KEY,
+          },
           body: JSON.stringify({
-            contents: [{ parts: [{ text: `${SYSTEM_INSTRUCTION}\n\n${buildPrompt(conversationText)}` }] }],
-            generationConfig: { temperature: 0.2 },
+            systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
+            contents: [{ role: 'user', parts: [{ text: buildPrompt(conversationText) }] }],
+            generationConfig: {
+              temperature: 0.1,
+              responseMimeType: 'application/json',
+            },
           }),
         }
       );
 
       if (!response.ok) {
         const errJson = await response.json().catch(() => ({}));
-        throw new Error(errJson.error?.message || `HTTP ${response.status}`);
+        const msg = errJson.error?.message || `HTTP ${response.status}`;
+        console.warn(`[geminiService] Model ${m} failed: ${msg}`);
+        throw new Error(msg);
       }
 
       const resData = await response.json();
       const text = resData.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (text) return text;
+      if (text) {
+        console.log(`[geminiService] Success with model: ${m}`);
+        return text;
+      }
+      throw new Error('Empty response from API');
     } catch (err) {
       lastErr = err;
+      console.warn(`[geminiService] Model ${m} error:`, err.message);
     }
   }
 
-  throw lastErr || new Error('All Gemini REST endpoints failed');
+  throw lastErr || new Error('All Gemini models failed');
 }
 
 async function analyzeConversation(conversationText) {
   let rawText;
   let isMock = false;
 
+  console.log(`[geminiService] analyzeConversation called, API key present: ${!!env.GEMINI_API_KEY}`);
+
   try {
     if (env.GEMINI_API_KEY) {
       rawText = await callGeminiREST(conversationText);
     } else {
+      console.warn('[geminiService] No GEMINI_API_KEY — using Smart Extractor (mock mode)');
       isMock = true;
     }
   } catch (err) {
@@ -350,12 +385,18 @@ async function analyzeConversation(conversationText) {
       const validated = aiAnalysisSchema.safeParse(parsed);
       if (validated.success) {
         data = validated.data;
+        console.log(`[geminiService] AI returned ${data.tasks.length} task(s), ${data.decisions.length} decision(s)`);
+      } else {
+        console.warn('[geminiService] Schema validation failed:', JSON.stringify(validated.error?.errors?.slice(0, 3)));
       }
+    } else {
+      console.warn('[geminiService] JSON parse failed on raw AI response');
     }
   }
 
   // Fallback to Smart Local Extractor if live AI failed or output was invalid
   if (!data) {
+    console.warn('[geminiService] Falling back to Smart Local Extractor');
     data = extractSmartAnalysis(conversationText);
     isMock = true;
   }

@@ -53,11 +53,11 @@ async function sendOtpEmail(toAddress, otpCode) {
 async function sendPasswordResetEmail(toAddress, resetToken) {
   if (env.EMAIL_MOCK_MODE) {
     // eslint-disable-next-line no-console
-    console.log(`[MOCK EMAIL] To: ${toAddress}, Password Reset Link: http://localhost:5173/reset-password?token=${resetToken}`);
+    console.log(`[MOCK EMAIL] To: ${toAddress}, Password Reset Link: ${env.CLIENT_URL}/reset-password?token=${resetToken}`);
     return;
   }
 
-  const resetLink = `http://localhost:5173/reset-password?token=${resetToken}`;
+  const resetLink = `${env.CLIENT_URL}/reset-password?token=${resetToken}`;
 
   const params = {
     Source: env.EMAIL_FROM,

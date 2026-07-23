@@ -1,5 +1,10 @@
 import axios from 'axios';
 
+// In production, nginx handles routing:
+//   /api/auth/* → auth-service:5001
+//   /api/*      → project-service:5002
+// In dev, Vite proxy handles the same rewrites.
+// We always use /api as base — never manipulate URLs at runtime.
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api',
   headers: {
@@ -7,36 +12,19 @@ const api = axios.create({
   },
 });
 
-const rawAuthUrl = (import.meta.env.VITE_AUTH_API_URL || '').replace(/\/+$/, '');
-const rawProjectUrl = (import.meta.env.VITE_PROJECT_API_URL || '').replace(/\/+$/, '');
-
-// Request Interceptor — routes dynamically across microservice domains if
-// VITE_AUTH_API_URL / VITE_PROJECT_API_URL are set, or uses /api for Vite dev proxy / rewrites.
+// Request Interceptor — attaches auth token
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('syncmind_token');
-
-    const useRemoteUrls = !import.meta.env.DEV || import.meta.env.VITE_USE_REMOTE_API === 'true';
-
-    if (useRemoteUrls) {
-      if (config.url && config.url.startsWith('/auth') && rawAuthUrl) {
-        config.baseURL = rawAuthUrl;
-        config.url = config.url.replace(/^\/auth/, '');
-      } else if (rawProjectUrl && !config.url?.startsWith('/auth')) {
-        config.baseURL = rawProjectUrl;
-      }
-    }
-
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// Response Interceptor
+// Response Interceptor — unwraps data and normalises errors
 api.interceptors.response.use(
   (response) => response.data,
   (error) => {
@@ -54,7 +42,6 @@ api.interceptors.response.use(
 
     if (status === 401 && !error.config?.url?.includes('/login')) {
       localStorage.removeItem('syncmind_token');
-
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';
       }
