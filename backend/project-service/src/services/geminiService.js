@@ -174,45 +174,75 @@ function safeParseJson(text) {
   }
 }
 
-async function callGemini(conversationText) {
-  if (!env.GEMINI_API_KEY) {
-    throw new AppError('GEMINI_API_KEY is not configured on the server.', 500);
-  }
+async function callGeminiREST(conversationText) {
+  if (!env.GEMINI_API_KEY) throw new AppError('GEMINI_API_KEY is not configured on the server.', 500);
 
-  const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
-  const model = genAI.getGenerativeModel({
-    model: env.GEMINI_MODEL,
-    systemInstruction: SYSTEM_INSTRUCTION,
-    generationConfig: {
-      temperature: 0.2,
-      responseMimeType: 'application/json',
-    },
-  });
+  const configuredModel = env.GEMINI_MODEL &&
+    !['gemini-flash-latest', 'gemini-3.5-flash'].includes(env.GEMINI_MODEL)
+    ? env.GEMINI_MODEL
+    : null;
 
-  const prompt = buildPrompt(conversationText);
+  const models = [
+    configuredModel,
+    'gemini-2.5-flash',       // Latest recommended
+    'gemini-2.0-flash',       // Stable
+    'gemini-2.0-flash-lite',  // Lightweight
+    'gemini-1.5-flash',       // Fallback
+  ].filter(Boolean);
 
-  // One retry on transient failure
+  const uniqueModels = [...new Set(models)];
   let lastErr;
-  for (let attempt = 0; attempt < 2; attempt += 1) {
+
+  for (const m of uniqueModels) {
     try {
-      const result = await model.generateContent(prompt);
-      const text = result.response.text();
-      return text;
+      console.log(`[geminiService] Trying model: ${m}`);
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': env.GEMINI_API_KEY,
+          },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
+            contents: [{ role: 'user', parts: [{ text: buildPrompt(conversationText) }] }],
+            generationConfig: {
+              temperature: 0.1,
+              responseMimeType: 'application/json',
+            },
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errJson = await response.json().catch(() => ({}));
+        const msg = errJson.error?.message || `HTTP ${response.status}`;
+        console.warn(`[geminiService] Model ${m} failed: ${msg}`);
+        throw new Error(msg);
+      }
+
+      const resData = await response.json();
+      const text = resData.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (text) {
+        console.log(`[geminiService] Success with model: ${m}`);
+        return text;
+      }
+      throw new Error('Empty response from API');
     } catch (err) {
       lastErr = err;
-      if (attempt === 0) {
-        await new Promise((r) => setTimeout(r, 500));
-      }
+      console.warn(`[geminiService] Model ${m} error:`, err.message);
     }
   }
-  throw new AppError(\`AI analysis failed: \${lastErr.message}\`, 502);
+
+  throw new AppError(`AI analysis failed: ${lastErr.message}`, 502);
 }
 
 /**
  * Analyze conversation text and return a validated, schema-conformant result.
  */
 async function analyzeConversation(conversationText) {
-  const rawText = await callGemini(conversationText);
+  const rawText = await callGeminiREST(conversationText);
 
   const parsed = safeParseJson(rawText);
   if (!parsed) {
