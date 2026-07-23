@@ -27,7 +27,6 @@ services:
       - NODE_ENV=production
       - JWT_SECRET=w7NroeCl5YE5D5PSVXjLbZjmmhRzC6st0dd2uSS3T3J
       - GEMINI_MODEL=gemini-2.5-flash
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
       - CLIENT_URL=https://syncmind.duckdns.org
     volumes:
       - project-db:/app/prisma
