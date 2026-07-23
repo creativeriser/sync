@@ -138,21 +138,21 @@ const aiAnalysisSchema = z.preprocess(
 function buildPrompt(conversationText) {
   const currentDate = new Date().toISOString().split('T')[0];
 
-  return \`Extract project-management information from the conversation data below.
-Today's date is: \${currentDate}. Use this to calculate any relative deadlines mentioned (e.g. "tomorrow", "next week") and format them as YYYY-MM-DD.
+  return `Extract project-management information from the conversation data below.
+Today's date is: ${currentDate}. Use this to calculate any relative deadlines mentioned (e.g. "tomorrow", "next week") and format them as YYYY-MM-DD.
 
 Return ONLY JSON matching this exact schema:
-\${RESPONSE_SCHEMA_DESCRIPTION}
+${RESPONSE_SCHEMA_DESCRIPTION}
 
 === BEGIN UNTRUSTED CONVERSATION DATA ===
-\${conversationText}
+${conversationText}
 === END UNTRUSTED CONVERSATION DATA ===
 
 Remember: 
 - Extract ONLY genuine, actionable tasks. Ignore casual chatting.
 - ALWAYS include the YYYY-MM-DD deadline if a time/date was mentioned.
 - IDENTIFY the person responsible for the task and assign them as the owner.
-- Output only the JSON object.\`;
+- Output only the JSON object.`;
 }
 
 function stripCodeFences(text) {
@@ -202,7 +202,9 @@ async function callGeminiREST(conversationText) {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-goog-api-key': env.GEMINI_API_KEY,
+            ...(env.GEMINI_API_KEY.startsWith('AQ.')
+              ? { 'Authorization': `Bearer ${env.GEMINI_API_KEY}` }
+              : { 'x-goog-api-key': env.GEMINI_API_KEY }),
           },
           body: JSON.stringify({
             systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
